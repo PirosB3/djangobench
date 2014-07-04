@@ -12,10 +12,12 @@ import email
 import simplejson
 import sys
 from djangobench import perf
+from pymongo import MongoClient
 
 __version__ = '0.10'
 
 DEFAULT_BENCHMARK_DIR = os.path.join(os.path.dirname(__file__), 'benchmarks')
+CLIENT = MongoClient()
 
 
 def run_benchmarks(control, experiment, benchmark_dir, benchmarks, trials,
@@ -104,7 +106,7 @@ def run_benchmarks(control, experiment, benchmark_dir, benchmarks, trials,
                     control_data=control_data,
                     experiment_data=experiment_data,
                 )
-            print(format_benchmark_result(result, len(control_data.runtimes), control_data.runtimes, experiment_data.runtimes, show_median))
+            print(format_benchmark_result(result, len(control_data.runtimes), control_data.runtimes, experiment_data.runtimes, show_median, benchmark))
             print('')
 
 
@@ -216,7 +218,7 @@ class colorize(object):
     def bad(cls, text):
         return cls.colorize(cls.BAD, text)
 
-def format_benchmark_result(result, num_points, control_data, experiment_data, show_median):
+def format_benchmark_result(result, num_points, control_data, experiment_data, show_median, name):
     if isinstance(result, perf.BenchmarkResult):
         output = ''
         delta_min = result.delta_min
@@ -241,6 +243,9 @@ def format_benchmark_result(result, num_points, control_data, experiment_data, s
             else:
                 median_body = colorize.bad(median_text)
             output += "Median: %s\n" % median_body
+
+            #CLIENT.django.benchmarks.insert({ 'name': name }, {'scores': []}, upsert=True)
+            CLIENT.django.benchmarks.update({ 'name': name }, {'$push': {'scores': median}}, upsert=True)
 
         t_msg = result.t_msg
         if 'Not significant' in t_msg:
