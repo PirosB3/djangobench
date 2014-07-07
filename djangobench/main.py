@@ -236,7 +236,9 @@ def format_benchmark_result(result, num_points, control_data, experiment_data, s
         output += "Avg: %f -> %f: %s\n" % (result.avg_base, result.avg_changed, delta_avg)
 
         if show_median:
-            median = get_median(control_data) - get_median(experiment_data)
+            control_median = get_median(control_data)
+            experiment_median = get_median(experiment_data)
+            median = control_median - experiment_median
             median_text = "%0.10f" % median
             if median > .0:
                 median_body = colorize.good(median_text)
@@ -244,8 +246,9 @@ def format_benchmark_result(result, num_points, control_data, experiment_data, s
                 median_body = colorize.bad(median_text)
             output += "Median: %s\n" % median_body
 
-            #CLIENT.django.benchmarks.insert({ 'name': name }, {'scores': []}, upsert=True)
-            CLIENT.django.benchmarks.update({ 'name': name }, {'$push': {'scores': median}}, upsert=True)
+            CLIENT.django.benchmarks.update({'name': name}, {
+                '$push': {'diff': median, 'control': control_median, 'experiment': experiment_median},
+            }, upsert=True)
 
         t_msg = result.t_msg
         if 'Not significant' in t_msg:
